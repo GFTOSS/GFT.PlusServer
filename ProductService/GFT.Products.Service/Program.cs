@@ -5,6 +5,8 @@ using System;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
+using Microsoft.Extensions.Logging.ApplicationInsights;
+using Microsoft.Extensions.Logging;
 
 namespace GFT.Products.Service
 {
@@ -26,6 +28,24 @@ namespace GFT.Products.Service
                                                                  new DefaultAzureCredential());
                         config.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
                     }
+                })
+                .ConfigureLogging((context, builder) =>
+                {
+                    // Providing an instrumentation key is required if you're using the
+                    // standalone Microsoft.Extensions.Logging.ApplicationInsights package,
+                    // or when you need to capture logs during application startup, for example
+                    // in the Program.cs or Startup.cs itself.
+                    builder.AddApplicationInsights(
+                        context.Configuration["app:insights:connection:string"]);
+
+                    // Capture all log-level entries from Program
+                    builder.AddFilter<ApplicationInsightsLoggerProvider>(
+                        typeof(Program).FullName, LogLevel.Trace);
+
+                    // Capture all log-level entries from Startup
+                    builder.AddFilter<ApplicationInsightsLoggerProvider>(
+                        typeof(Startup).FullName, LogLevel.Trace);
+
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {

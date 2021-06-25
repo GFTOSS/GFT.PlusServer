@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace GFT.Products.Service.Controllers
@@ -27,45 +28,65 @@ namespace GFT.Products.Service.Controllers
         [HttpGet]
         public IEnumerable<Product> Get()
         {
+            Stopwatch sw = new Stopwatch();
             var toReturn = new List<Product>();
-            using (MySqlConnection conn = new MySqlConnection(_connectionString))
-            {
-                conn.Open();
-                using (var cmd = conn.CreateCommand())
+            try
+            {                
+                sw.Start();                
+                using (MySqlConnection conn = new MySqlConnection(_connectionString))
                 {
-                    cmd.CommandText = "select * from Product";
-                    using (var reader = cmd.ExecuteReader())
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
                     {
-                        while (reader.Read())
+                        cmd.CommandText = "select * from Product";
+                        using (var reader = cmd.ExecuteReader())
                         {
-                            toReturn.Add(new Product()
+                            while (reader.Read())
                             {
-                                Name = reader["Name"].ToString(),
-                                Price = Convert.ToDouble(reader["Price"]),
-                            });
+                                toReturn.Add(new Product()
+                                {
+                                    Name = reader["Name"].ToString(),
+                                    Price = Convert.ToDouble(reader["Price"]),
+                                });
+                            }
                         }
                     }
                 }
             }
+            finally
+            {
+                sw.Stop();
+                _logger.LogInformation($"Loaded in {sw.Elapsed.TotalSeconds} secs.");
+            }            
             return toReturn;
         }
 
         [HttpPut]
         public async Task<int> Add([FromBody] Product productToAdd)
         {
+            Stopwatch sw = new Stopwatch();
             var toReturn = new List<Product>();
-            using (MySqlConnection conn = new MySqlConnection(_connectionString))
+            try
             {
-                conn.Open();
-                using (var cmd = conn.CreateCommand())
+                sw.Start();
+                using (MySqlConnection conn = new MySqlConnection(_connectionString))
                 {
-                    cmd.CommandText =  "insert into Product(Name,Price) values (@Name,@Price)";
-                    cmd.Parameters.AddWithValue("Name", productToAdd.Name);
-                    cmd.Parameters.AddWithValue("Price", productToAdd.Price);
-                    return await cmd.ExecuteNonQueryAsync();
+                    conn.Open();
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = "insert into Product(Name,Price) values (@Name,@Price)";
+                        cmd.Parameters.AddWithValue("Name", productToAdd.Name);
+                        cmd.Parameters.AddWithValue("Price", productToAdd.Price);
+                        return await cmd.ExecuteNonQueryAsync();
 
+                    }
                 }
             }
+            finally
+            {
+                sw.Stop();
+                _logger.LogInformation($"Added in {sw.Elapsed.TotalSeconds} secs.");
+            }            
         }
     }
 }
