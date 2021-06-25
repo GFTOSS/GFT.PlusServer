@@ -35,8 +35,8 @@ namespace GFT.Products.Service
                     // standalone Microsoft.Extensions.Logging.ApplicationInsights package,
                     // or when you need to capture logs during application startup, for example
                     // in the Program.cs or Startup.cs itself.
-                    builder.AddApplicationInsights(
-                        context.Configuration["app:insights:connection:string"]);
+                    builder.AddApplicationInsights(context.Configuration["app:insights:key"]);
+
 
                     // Capture all log-level entries from Program
                     builder.AddFilter<ApplicationInsightsLoggerProvider>(

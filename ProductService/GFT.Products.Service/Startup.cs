@@ -24,8 +24,9 @@ namespace GFT.Products.Service
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "GFT.Products.Service", Version = "v1" });
-            }); 
-            services.AddApplicationInsightsTelemetry(Configuration["app:insights:connection:string"]);
+            });
+            services.AddApplicationInsightsTelemetry(Configuration["app:insights:key"]);
+            
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
