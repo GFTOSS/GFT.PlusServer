@@ -16,24 +16,31 @@ namespace GFT.Products.Service.Controllers
     {
         private readonly ILogger<ProductsController> _logger;
         private readonly IConfiguration _configuration;
-        private readonly string _connectionString;
+        private readonly Dictionary<string,string> _connectionStrings;
 
         public ProductsController(ILogger<ProductsController> logger, IConfiguration Configuration)
         {
             _logger = logger;
             _configuration = Configuration;
-            _connectionString = _configuration["app:mysql:connection:string"];
+            _connectionStrings = new Dictionary<string, string>();
+            _connectionStrings.Add("local", _configuration["app:mysql:connection:string"]);
+            _connectionStrings.Add("plusserver", _configuration["app:mysql:connection:string:plusserver"]);
         }
 
         [HttpGet]
-        public IEnumerable<Product> Get()
+        [Route("{connectionName}")]
+        public ActionResult<IEnumerable<Product>> Get([FromRoute] string connectionName)
         {
-            Stopwatch sw = new Stopwatch();
             var toReturn = new List<Product>();
+            if(!_connectionStrings.ContainsKey(connectionName))
+            {
+                return NotFound($"{connectionName} not found!");
+            }
+            Stopwatch sw = new Stopwatch();                
             try
-            {                
-                sw.Start();                
-                using (MySqlConnection conn = new MySqlConnection(_connectionString))
+            {
+                sw.Start();
+                using (MySqlConnection conn = new MySqlConnection(_connectionStrings[connectionName]))
                 {
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
@@ -56,20 +63,26 @@ namespace GFT.Products.Service.Controllers
             finally
             {
                 sw.Stop();
-                _logger.LogInformation($"Loaded in {sw.Elapsed.TotalSeconds} secs.");
-            }            
-            return toReturn;
+                _logger.LogInformation($"{connectionName}: Loaded in {sw.Elapsed.TotalSeconds} secs.");
+            }
+            return Ok(toReturn);
         }
 
         [HttpPut]
-        public async Task<int> Add([FromBody] Product productToAdd)
+        [Route("{connectionName}")]
+        public async Task<ActionResult<int>> Add([FromRoute] string connectionName, [FromBody] Product productToAdd)
         {
-            Stopwatch sw = new Stopwatch();
+            int rowsAdded = 0;
             var toReturn = new List<Product>();
+            if (!_connectionStrings.ContainsKey(connectionName))
+            {
+                return NotFound($"{connectionName} not found!");
+            }
+            Stopwatch sw = new Stopwatch();
             try
             {
                 sw.Start();
-                using (MySqlConnection conn = new MySqlConnection(_connectionString))
+                using (MySqlConnection conn = new MySqlConnection(_connectionStrings[connectionName]))
                 {
                     conn.Open();
                     using (var cmd = conn.CreateCommand())
@@ -77,16 +90,16 @@ namespace GFT.Products.Service.Controllers
                         cmd.CommandText = "insert into Product(Name,Price) values (@Name,@Price)";
                         cmd.Parameters.AddWithValue("Name", productToAdd.Name);
                         cmd.Parameters.AddWithValue("Price", productToAdd.Price);
-                        return await cmd.ExecuteNonQueryAsync();
-
+                        rowsAdded += await cmd.ExecuteNonQueryAsync();
                     }
                 }
             }
             finally
             {
                 sw.Stop();
-                _logger.LogInformation($"Added in {sw.Elapsed.TotalSeconds} secs.");
-            }            
+                _logger.LogInformation($"{connectionName}: Added in {sw.Elapsed.TotalSeconds} secs.");
+            }
+            return Ok(rowsAdded);
         }
     }
 }
